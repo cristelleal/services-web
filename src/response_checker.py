@@ -2,8 +2,24 @@ from langchain.llms import Ollama
 from database import get_connection
 
 # Load the local Llama model via Ollama
-llm = Ollama(model="llama3:3b")
+llm = Ollama(model="llama3.2:3b")
 
+def create_tables_score():
+    conn = get_connection()
+    cur = conn.cursor()
+    create_tables_query= """ CREATE TABLE IF NOT EXISTS scores (
+        id SERIAL PRIMARY KEY,
+        question_id INTEGER REFERENCES questions(id) ON DELETE CASCADE,
+        user_answer TEXT NOT NULL,
+        correct_answer TEXT NOT NULL,
+        score INTEGER NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+    );"""
+    cur.execute(create_tables_query)
+    conn.commit()
+    cur.close()
+    conn.close()
+  
 def get_correct_answer(question_id):
     """Retrieve the correct answer from the database."""
     conn = get_connection()
@@ -14,9 +30,18 @@ def get_correct_answer(question_id):
     conn.close()
     return result[0] if result else None
 
-def generate_response(question):
+def generate_response(question,answer_choices):
     """Use the Llama 3 model to generate an answer."""
-    prompt = f"Answer this trivia question in a short and concise way: {question}"
+    prompt = f"""
+    You are given a multiple-choice question (QCM). Select the correct answer among the given choices:
+    
+    Question: {question}
+    Choices:
+    {chr(10).join([f"{i+1}. {choice}" for i, choice in enumerate(answer_choices)])}
+    
+    Provide only the number corresponding to the correct choice.
+    """
+    print(prompt)
     return llm.invoke(prompt)
 
 def score_answer(user_answer, correct_answer):
