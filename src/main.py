@@ -112,9 +112,10 @@ def scrape_trivia():
     """Fetches trivia questions from OpenTDB and stores them in the database."""
     token = requests.get('https://opentdb.com/api_token.php?command=request').json()['token']
     db = {}
-
+    amount = 50
+    
     while True:
-        response = requests.get(f'https://opentdb.com/api.php?amount=50&token={token}')
+        response = requests.get(f'https://opentdb.com/api.php?amount={amount}&token={token}')
         data = response.json()
 
         if 'results' not in data or not data['results']:
@@ -130,8 +131,8 @@ def scrape_trivia():
             if question_text in db:  # Avoid duplicates in memory
                 continue
             
-            if question_exists(question_text):  # Avoid duplicates in database
-                continue
+            # if question_exists(question_text):  # Avoid duplicates in database
+            #     continue
 
             db[question_text] = result
             question_id = insert_question(question_text, category)
@@ -141,7 +142,10 @@ def scrape_trivia():
                     insert_answer(question_id, answer, False)
 
         print(f'Total Questions Fetched: {len(db)}')
-
+       
+        if len(db) >= 4300:
+            amount = 1
+            
         # API rate limiting
         time.sleep(5)
 
